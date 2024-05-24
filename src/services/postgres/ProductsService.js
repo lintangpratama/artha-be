@@ -1,3 +1,4 @@
+/* eslint-disable linebreak-style */
 const { Pool } = require('pg');
 const uuid = require('uuid-random');
 const { validateUuid } = require('../../utils');
@@ -36,7 +37,7 @@ class ProductsService {
             WHERE products.company_id = $1
             ${categoryId ? `AND categories.id = '${categoryId}'` : ''}
             ${q ? `AND (products.name ILIKE '%${q}%' OR products.code ILIKE '%${q}%')` : ''}
-            ORDER BY products.created_at DESC
+            ORDER BY products.name ASC
             LIMIT $2 OFFSET $3`,
       values: [companyId, limit, offsets],
     };

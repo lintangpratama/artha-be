@@ -1,3 +1,4 @@
+/* eslint-disable linebreak-style */
 class ProductsHandler {
   constructor(service, validator) {
     this._service = service;

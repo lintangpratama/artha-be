@@ -1,3 +1,4 @@
+/* eslint-disable linebreak-style */
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const uuid = require('uuid-random');
@@ -17,15 +18,16 @@ class UsersService {
       values: [email],
     };
     const result = await this._pool.query(query);
+    console.log(result);
 
     if (!result.rows.length) {
-      throw new AuthenticationError('Kredensial yang Anda berikan salah');
+      throw new AuthenticationError('Email tidak terdaftar');
     }
 
     const { id, company_id: companyId, password: hashedPassword } = result.rows[0];
 
     const match = await bcrypt.compare(password, hashedPassword);
-
+    console.log(match);
     if (!match) {
       throw new AuthenticationError('Kredensial yang Anda berikan salah');
     }

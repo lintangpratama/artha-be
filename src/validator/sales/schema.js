@@ -1,3 +1,4 @@
+/* eslint-disable linebreak-style */
 const Joi = require('joi');
 
 const PostSalePayloadSchema = Joi.object({

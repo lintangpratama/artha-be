@@ -15,10 +15,11 @@ class RegistrationsHandler {
       await this._service.registerStore({ name, email, password });
 
       const response = h.response({
-        status: 'success',
-        message: 'Toko berhasil didaftarkan',
+        status: "success",
+        message: "Toko berhasil didaftarkan",
         data: {
-          name, email,
+          name,
+          email,
         },
       });
       response.code(201);

@@ -1,58 +1,60 @@
-require('dotenv').config();
+/* eslint-disable linebreak-style */
+/* eslint-disable quotes */
+require("dotenv").config();
 
-const Hapi = require('@hapi/hapi');
-const Jwt = require('@hapi/jwt');
+const Hapi = require("@hapi/hapi");
+const Jwt = require("@hapi/jwt");
 
-const ClientError = require('./exceptions/ClientError');
+const ClientError = require("./exceptions/ClientError");
 
 // authentications
-const authentications = require('./api/authentications');
-const AuthenticationsService = require('./services/postgres/AuthenticationsService');
-const TokenManager = require('./tokenize/TokenManager');
-const AuthenticationsValidator = require('./validator/authentications');
+const authentications = require("./api/authentications");
+const AuthenticationsService = require("./services/postgres/AuthenticationsService");
+const TokenManager = require("./tokenize/TokenManager");
+const AuthenticationsValidator = require("./validator/authentications");
 
 // users
-const users = require('./api/users');
-const UsersService = require('./services/postgres/UsersService');
-const UsersValidator = require('./validator/users');
+const users = require("./api/users");
+const UsersService = require("./services/postgres/UsersService");
+const UsersValidator = require("./validator/users");
 
 // registrations
-const registrations = require('./api/registrations');
-const RegistrationsService = require('./services/postgres/RegistrationService');
-const RegistrationsValidator = require('./validator/registration');
+const registrations = require("./api/registrations");
+const RegistrationsService = require("./services/postgres/RegistrationService");
+const RegistrationsValidator = require("./validator/registration");
 
 // untis
-const units = require('./api/units');
-const UnitsService = require('./services/postgres/UnitsService');
+const units = require("./api/units");
+const UnitsService = require("./services/postgres/UnitsService");
 
 // categories
-const categories = require('./api/categories');
-const CategoriesService = require('./services/postgres/CategoriesService');
-const CategoriesValidator = require('./validator/categories');
+const categories = require("./api/categories");
+const CategoriesService = require("./services/postgres/CategoriesService");
+const CategoriesValidator = require("./validator/categories");
 
 // customers
-const customers = require('./api/customers');
-const CustomersService = require('./services/postgres/CustomersService');
-const CustomerValidator = require('./validator/customers');
+const customers = require("./api/customers");
+const CustomersService = require("./services/postgres/CustomersService");
+const CustomerValidator = require("./validator/customers");
 
 // products
-const products = require('./api/products');
-const ProductsService = require('./services/postgres/ProductsService');
-const ProductsValidator = require('./validator/products');
+const products = require("./api/products");
+const ProductsService = require("./services/postgres/ProductsService");
+const ProductsValidator = require("./validator/products");
 
 // sales
-const sales = require('./api/sales');
-const SalesService = require('./services/postgres/SalesService');
-const SalesValidator = require('./validator/sales');
+const sales = require("./api/sales");
+const SalesService = require("./services/postgres/SalesService");
+const SalesValidator = require("./validator/sales");
 
 // purchases
-const purchases = require('./api/purchases');
-const PurchasesService = require('./services/postgres/PurchasesService');
-const PurchasesValidator = require('./validator/purchases');
+const purchases = require("./api/purchases");
+const PurchasesService = require("./services/postgres/PurchasesService");
+const PurchasesValidator = require("./validator/purchases");
 
 // dashboard
-const general = require('./api/general');
-const GeneralService = require('./services/postgres/GeneralService');
+const general = require("./api/general");
+const GeneralService = require("./services/postgres/GeneralService");
 
 const init = async () => {
   // instances
@@ -71,12 +73,15 @@ const init = async () => {
   const server = Hapi.server({
     port: process.env.PORT,
     host: process.env.HOST,
+    debug: { log: ["error", "database", "read"] },
     routes: {
       cors: {
-        origin: ['*'],
+        origin: ["*"],
       },
     },
   });
+
+  server.log(['test', 'error'], 'Test event');
 
   // register plugin
   await server.register([
@@ -85,8 +90,22 @@ const init = async () => {
     },
   ]);
 
+  await server.register({
+    plugin: require("hapi-pino"),
+    options: {
+      // Redact Authorization headers, see https://getpino.io/#/docs/redaction
+      redact: ["req.headers.authorization"],
+    },
+  });
+
+  // also as a decorated API
+  server.logger.info("another way for accessing it");
+
+  // and through Hapi standard logging system
+  server.log(["subsystem"], "third way for accessing it");
+
   // jwt
-  server.auth.strategy('kasiraja_jwt', 'jwt', {
+  server.auth.strategy("kasiraja_jwt", "jwt", {
     keys: process.env.ACCESS_TOKEN_KEY,
     verify: {
       aud: false,
@@ -106,23 +125,23 @@ const init = async () => {
   // route
   server.route([
     {
-      method: 'GET',
-      path: '/',
+      method: "GET",
+      path: "/",
       handler: () => ({
         data: {
-          status: 'Ok!',
-          name: 'kasirAja Api',
-          version: '1.0.0',
+          status: "Ok!",
+          name: "kasirAja Api",
+          version: "1.0.0",
         },
       }),
     },
     {
-      method: '*',
-      path: '/{p*}', // catch-all path
+      method: "*",
+      path: "/{p*}", // catch-all path
       handler: (request, h) => {
         const response = h.response({
-          status: '404',
-          message: 'Not Found',
+          status: "404",
+          message: "Not Found",
         });
         response.code(404);
         return response;
@@ -131,12 +150,12 @@ const init = async () => {
   ]);
 
   // catch error response
-  server.ext('onPreResponse', (request, h) => {
+  server.ext("onPreResponse", (request, h) => {
     const { response } = request;
 
     if (response instanceof ClientError) {
       const newResponse = h.response({
-        status: 'fail',
+        status: "fail",
         message: response.message,
       });
       newResponse.code(response.statusCode);
@@ -224,7 +243,7 @@ const init = async () => {
   ]);
 
   await server.start();
-  console.log(`Server berjalan pada ${server.info.uri}`);
+  console.log(`Server running at ${server.info.uri}`);
 };
 
 init();

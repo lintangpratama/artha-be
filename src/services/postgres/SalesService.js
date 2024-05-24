@@ -1,5 +1,7 @@
+/* eslint-disable linebreak-style */
 const { Pool } = require('pg');
 const uuid = require('uuid-random');
+const moment = require('moment');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const { validateUuid } = require('../../utils');
@@ -10,7 +12,15 @@ class SalesService {
   }
 
   async createTransaction({
-    date, invoice, description, amount, discount, items, userId, officeId, customerId,
+    date,
+    invoice,
+    description,
+    amount,
+    discount,
+    items,
+    userId,
+    officeId,
+    customerId,
   }) {
     // check stock
     const stocksQuery = await this._pool.query(`
@@ -23,7 +33,8 @@ class SalesService {
       sale: stocks.find((sp) => sp.product_id === item.productId).sale,
     }));
     const checkStock = itemsWithStock
-      .map((iws) => +iws.stock - +iws.quantity).every((i) => i >= 0);
+      .map((iws) => +iws.stock - +iws.quantity)
+      .every((i) => i >= 0);
     if (!checkStock) {
       throw new InvariantError('transaksi gagal: stock tidak cukup');
     }
@@ -37,14 +48,30 @@ class SalesService {
         text: `INSERT INTO 
                 sales(id, date, invoice, description, amount, discount, created_by, office_id, customer_id)
               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        values: [id, date, invoice, description, amount, discount, userId, officeId, customerId],
+        values: [
+          id,
+          date,
+          invoice,
+          description,
+          amount,
+          discount,
+          userId,
+          officeId,
+          customerId,
+        ],
       };
 
       const sale = await client.query(saleQuery);
       const saleId = sale.rows[0].id;
 
       await itemsWithStock.map(async (item) => {
-        await client.query(`UPDATE stocks SET stock = '${+item.stock - +item.quantity}', sale = '${+item.sale + +item.quantity}' WHERE product_id = '${item.productId}'`);
+        await client.query(
+          `UPDATE stocks SET stock = '${
+            +item.stock - +item.quantity
+          }', sale = '${+item.sale + +item.quantity}' WHERE product_id = '${
+            item.productId
+          }'`,
+        );
 
         const itemQuery = {
           text: `INSERT INTO sale_items(sale_id, product_id, quantity, price) VALUES ('${saleId}', '${item.productId}', '${item.quantity}', '${item.price}')`,
@@ -64,18 +91,27 @@ class SalesService {
     }
   }
 
-  async getSales(companyId, {
-    startDate, endDate, page = 1, q = null, customerId, limit = 20,
-  }) {
+  async getSales(
+    companyId,
+    {
+      startDate, endDate, page = 1, q = null, customerId, limit = 20,
+    },
+  ) {
+    const convertedStartDate = moment(startDate, 'YYYY-MM-DD').format('YYYY-MM-DD');
+    const convertedEndDate = moment(endDate, 'YYYY-MM-DD').format('YYYY-MM-DD');
     const recordsQuery = await this._pool.query(`
       SELECT count(sales.id) as total 
       FROM sales 
-      ${customerId ? 'LEFT JOIN customers ON customers.id = sales.customer_id' : ''}
+      ${
+  customerId
+    ? 'LEFT JOIN customers ON customers.id = sales.customer_id'
+    : ''
+}
       WHERE 
         sales.office_id = (SELECT id FROM offices WHERE company_id = '${companyId}' LIMIT 1)
       ${q ? `AND invoice ILIKE '%${q}%'` : ''}
       ${customerId ? `AND customer_id = '${customerId}'` : ''}
-      AND date::DATE BETWEEN '${startDate}' AND '${endDate}'
+      AND date::DATE BETWEEN '${convertedStartDate}' AND '${convertedEndDate}'
     `);
 
     const { total } = recordsQuery.rows[0];
@@ -101,11 +137,10 @@ class SalesService {
             ORDER BY sales.created_at DESC
             LIMIT $4 OFFSET $5
             `,
-      values: [companyId, startDate, endDate, limit, offsets],
+      values: [companyId, convertedStartDate, convertedEndDate, limit, offsets],
     };
 
     const { rows } = await this._pool.query(query);
-
     return {
       sales: rows,
       meta: {
